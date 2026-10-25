@@ -8,7 +8,7 @@ CORS(app)
 
 # API key from environment variable (set this on Render / your PC)
 # On PC you can still set it, or put a temporary key as second argument for local testing
-client = Groq(api_key=os.environ.get("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", ""))
+client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
 
 SOULS = {
     "arthur": (
