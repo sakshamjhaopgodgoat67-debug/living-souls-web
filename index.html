@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Living Souls – AI Companions</title>
+  <style>
+    :root {
+      --bg: #070b14; --panel: #0e1422; --panel2: #151d2e;
+      --accent: #a78bfa; --text: #f1f5f9; --muted: #94a3b8;
+      --danger: #f43f5e; --success: #10b981; --warn: #f59e0b; --gold: #fbbf24;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    header { display: flex; align-items: center; justify-content: space-between; padding: 10px 18px; background: var(--panel); border-bottom: 1px solid #1e293b; z-index: 30; }
+    .logo { display: flex; align-items: center; gap: 12px; cursor: pointer; user-select: none; }
+    .logo-mark { width: 44px; height: 44px; border-radius: 12px; overflow: hidden; position: relative; border: 2px solid #334155; background: #0f172a; }
+    .logo-mark svg { width: 100%; height: 100%; display: block; }
+    .logo-text { font-weight: 800; font-size: 1.25rem; background: linear-gradient(90deg, #94a3b8 0%, #94a3b8 45%, #6ee7b7 55%, #34d399 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .logo-text small { display: block; font-size: 0.68rem; font-weight: 500; -webkit-text-fill-color: var(--muted); letter-spacing: 0.4px; }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    .btn { border: none; border-radius: 10px; padding: 8px 15px; font-weight: 600; cursor: pointer; font-size: 0.86rem; transition: 0.2s; }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid #334155; }
+    .btn-ghost:hover { background: var(--panel2); color: var(--text); }
+    .btn-primary { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: #fff; }
+    .btn-trial { background: linear-gradient(135deg, #059669, #10b981); color: #ecfdf5; }
+    .btn-trial.activated { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #1c1400; pointer-events: none; }
+
+    .main { flex: 1; display: flex; overflow: hidden; }
+
+    /* SIDEBAR */
+    .sidebar { width: 280px; background: var(--panel); border-right: 1px solid #1e293b; display: flex; flex-direction: column; overflow: hidden; }
+    .sidebar-top { padding: 12px; display: flex; flex-direction: column; gap: 8px; border-bottom: 1px solid #1e293b; }
+    .nav-btn { width: 100%; padding: 11px 14px; background: var(--panel2); border: 1px solid #243044; border-radius: 12px; color: var(--text); font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 0.9rem; transition: 0.18s; text-align: left; }
+    .nav-btn:hover { border-color: var(--accent); background: #1e293b; }
+    .nav-btn.active { border-color: var(--accent); background: rgba(167,139,250,0.12); }
+    .nav-btn .arrow { margin-left: auto; font-size: 0.75rem; color: var(--muted); transition: 0.2s; }
+    .nav-btn.open .arrow { transform: rotate(90deg); }
+
+    .sidebar-scroll { flex: 1; overflow-y: auto; padding: 10px 12px 16px; }
+    .collapse-box { display: none; flex-direction: column; gap: 4px; margin: 4px 0 10px 8px; padding-left: 8px; border-left: 2px solid #243044; }
+    .collapse-box.show { display: flex; }
+
+    .mode-item { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 11px; cursor: pointer; border: 1px solid transparent; }
+    .mode-item:hover { background: var(--panel2); }
+    .mode-item.active { background: rgba(167,139,250,0.15); border-color: rgba(167,139,250,0.35); }
+    .mode-item.locked { opacity: 0.5; }
+    .mode-avatar { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; font-size: 1.1rem; flex-shrink: 0; }
+    .mode-name { font-weight: 650; font-size: 0.88rem; }
+    .mode-role { font-size: 0.7rem; color: var(--muted); }
+    .plan-badge { font-size: 0.58rem; padding: 2px 6px; border-radius: 6px; font-weight: 700; margin-left: auto; }
+    .badge-free { background: #064e3b; color: #6ee7b7; }
+    .badge-paid { background: #422006; color: #fbbf24; }
+    .lock-icon { margin-left: auto; font-size: 0.85rem; color: var(--gold); }
+
+    .history-item, .project-item { padding: 10px 12px; border-radius: 10px; cursor: pointer; font-size: 0.86rem; color: var(--muted); border: 1px solid transparent; display: flex; align-items: center; gap: 8px; }
+    .history-item:hover, .project-item:hover { background: var(--panel2); color: var(--text); }
+    .history-item.active { background: var(--panel2); color: var(--text); border-color: #334155; }
+    .empty-hint { font-size: 0.8rem; color: var(--muted); padding: 12px 8px; text-align: center; line-height: 1.4; }
+
+    /* CHAT */
+    .chat-area { flex: 1; display: flex; flex-direction: column; position: relative; background: radial-gradient(ellipse at 20% 0%, #121a2b, #070b14 70%); }
+    .face-box { position: absolute; top: 14px; right: 18px; text-align: center; z-index: 10; pointer-events: none; }
+    .face { width: 84px; height: 84px; border-radius: 50%; background: #1e293b; border: 3px solid #334155; display: grid; place-items: center; font-size: 2.7rem; transition: 0.4s; position: relative; }
+    .face.burning { border-color: #f43f5e; box-shadow: 0 0 30px rgba(244,63,94,0.5); }
+    .face.painter { border-color: #22d3ee; }
+    .face.love { border-color: #ec4899; box-shadow: 0 0 28px rgba(236,72,153,0.45); }
+    .face.finance { border-color: #fbbf24; }
+    .hat { position: absolute; top: -18px; left: 50%; transform: translateX(-50%) rotate(-12deg); font-size: 1.7rem; display: none; }
+    .face.painter .hat { display: block; }
+    .face-label { font-size: 0.68rem; color: var(--muted); margin-top: 4px; }
+    .face-ai { font-size: 0.68rem; color: var(--accent); font-weight: 600; }
+
+    .messages { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+    .msg { max-width: 75%; padding: 12px 15px; border-radius: 16px; line-height: 1.5; font-size: 0.92rem; animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    .msg.user { align-self: flex-end; background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    .msg.ai { align-self: flex-start; background: var(--panel2); border: 1px solid #243044; }
+    .msg.ai .tag { font-size: 0.7rem; font-weight: 700; color: var(--accent); display: block; margin-bottom: 3px; }
+    .msg.system { align-self: center; color: var(--muted); font-size: 0.82rem; text-align: center; background: transparent; max-width: 90%; }
+    .msg.roast { background: linear-gradient(135deg, #3f1219, #2a0c12); border: 1px solid #6b2130; }
+
+    .input-area { padding: 12px 18px 16px; }
+    .input-row { display: flex; gap: 10px; align-items: flex-end; background: var(--panel2); border-radius: 16px; padding: 8px 11px; border: 1px solid #334155; }
+    textarea { flex: 1; background: transparent; border: none; color: var(--text); font-size: 0.92rem; resize: none; max-height: 90px; padding: 6px 4px; outline: none; font-family: inherit; }
+    .send-btn { width: 40px; height: 40px; border-radius: 11px; background: var(--accent); border: none; color: #fff; font-size: 1.1rem; cursor: pointer; }
+
+    /* SPECIAL PANELS */
+    .special-panel { position: absolute; inset: 0; background: rgba(7,11,20,0.97); z-index: 20; display: none; flex-direction: column; padding: 16px; }
+    .special-panel.open { display: flex; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .paint-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; align-items: center; }
+    .tool-btn { padding: 7px 12px; border-radius: 9px; border: 1px solid #334155; background: var(--panel2); color: var(--text); cursor: pointer; font-size: 0.82rem; }
+    .tool-btn.active { background: var(--accent); border-color: var(--accent); }
+    #paintCanvas { flex: 1; background: #fff; border-radius: 12px; cursor: crosshair; max-height: calc(100% - 100px); touch-action: none; }
+    .abacus-frame { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: var(--panel2); border-radius: 16px; padding: 24px; }
+    .abacus-rod { display: flex; gap: 6px; background: #1e293b; padding: 10px 16px; border-radius: 12px; }
+    .bead { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(145deg, #fbbf24, #f59e0b); cursor: pointer; }
+    .bead.off { background: #334155; opacity: 0.5; }
+    .abacus-value { font-size: 2rem; font-weight: 800; color: var(--gold); }
+    .builder-canvas { flex: 1; background: var(--panel2); border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 28px; text-align: center; }
+    .builder-preview { width: 100%; max-width: 420px; height: 160px; background: #0f172a; border: 1px dashed #334155; border-radius: 12px; display: grid; place-items: center; color: var(--muted); }
+
+    /* LIBRARY / PROJECTS VIEWS */
+    .view-panel { position: absolute; inset: 0; background: var(--bg); z-index: 15; display: none; flex-direction: column; padding: 20px; overflow-y: auto; }
+    .view-panel.open { display: flex; }
+    .view-panel h2 { margin-bottom: 6px; }
+    .view-panel .sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 18px; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+    .card { background: var(--panel2); border: 1px solid #243044; border-radius: 14px; padding: 16px; cursor: pointer; transition: 0.2s; }
+    .card:hover { border-color: var(--accent); }
+    .card h3 { font-size: 0.95rem; margin-bottom: 6px; }
+    .card p { font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+    .card .meta { font-size: 0.72rem; color: var(--muted); margin-top: 10px; }
+
+    .trial-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.78); display: none; place-items: center; z-index: 200; }
+    .trial-overlay.show { display: grid; }
+    .trial-card { background: linear-gradient(160deg, #1e293b, #0f172a); border: 2px solid var(--gold); border-radius: 22px; padding: 36px 40px; text-align: center; max-width: 400px; animation: popIn 0.4s ease; }
+    @keyframes popIn { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .trial-card h2 { font-size: 1.5rem; margin: 10px 0; background: linear-gradient(90deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .trial-card p { color: var(--muted); margin-bottom: 16px; }
+    .trial-card ul { text-align: left; display: inline-block; margin-bottom: 18px; font-size: 0.9rem; }
+
+    .banner { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); padding: 10px 18px; border-radius: 10px; font-weight: 600; z-index: 50; display: none; font-size: 0.88rem; }
+    .banner.show { display: block; }
+    .banner.success { background: var(--success); color: #052e1c; }
+    .banner.warn { background: var(--warn); color: #1c1400; }
+    .banner.danger { background: var(--danger); color: #fff; }
+
+    .status-bar { display: flex; justify-content: space-between; padding: 5px 16px; background: #05080f; font-size: 0.7rem; color: var(--muted); border-top: 1px solid #1e293b; }
+    .status-bar span { color: var(--text); font-weight: 600; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; place-items: center; z-index: 100; }
+    .modal-overlay.open { display: grid; }
+    .modal { background: var(--panel); border-radius: 16px; padding: 24px; width: 90%; max-width: 380px; border: 1px solid #334155; }
+    .modal h2 { margin-bottom: 8px; }
+    .modal p { color: var(--muted); margin-bottom: 14px; font-size: 0.9rem; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+    .form-group input { width: 100%; padding: 9px 12px; border-radius: 9px; border: 1px solid #334155; background: var(--panel2); color: var(--text); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+
+    @media (max-width: 720px) { .sidebar { width: 72px; } .nav-btn span.label, .mode-role, .plan-badge, .logo-text { display: none; } .mode-name { font-size: 0.7rem; } }
+  </style>
+</head>
+<body>
+
+<script>
+  const OWNER_CONFIG = {
+    discordWebhook: "",
+    formspreeUrl: "",
+    ownerName: "Owner"
+  };
+</script>
+
+<header>
+  <div class="logo" onclick="location.reload()">
+    <!-- Half dead / half alive logo -->
+    <div class="logo-mark">
+      <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="alive" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#34d399"/>
+            <stop offset="100%" stop-color="#6ee7b7"/>
+          </linearGradient>
+          <linearGradient id="dead" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#64748b"/>
+            <stop offset="100%" stop-color="#334155"/>
+          </linearGradient>
+          <clipPath id="leftHalf"><rect x="0" y="0" width="32" height="64"/></clipPath>
+          <clipPath id="rightHalf"><rect x="32" y="0" width="32" height="64"/></clipPath>
+        </defs>
+        <!-- Body shape -->
+        <ellipse cx="32" cy="18" rx="12" ry="13" fill="url(#dead)" clip-path="url(#leftHalf)"/>
+        <ellipse cx="32" cy="18" rx="12" ry="13" fill="url(#alive)" clip-path="url(#rightHalf)"/>
+        <path d="M20 30 Q32 26 44 30 L42 52 Q32 56 22 52 Z" fill="url(#dead)" clip-path="url(#leftHalf)"/>
+        <path d="M20 30 Q32 26 44 30 L42 52 Q32 56 22 52 Z" fill="url(#alive)" clip-path="url(#rightHalf)"/>
+        <!-- Crack line -->
+        <line x1="32" y1="6" x2="32" y2="56" stroke="#0f172a" stroke-width="1.5"/>
+        <!-- Dead eye -->
+        <circle cx="27" cy="17" r="2" fill="#0f172a"/>
+        <!-- Alive eye -->
+        <circle cx="37" cy="17" r="2.2" fill="#052e1c"/>
+        <circle cx="37.5" cy="16.5" r="0.8" fill="#ecfdf5"/>
+      </svg>
+    </div>
+    <div class="logo-text">Living Souls<small>HALF DEAD · HALF ALIVE</small></div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-trial" id="trialBtn" onclick="activateTrial()">1 Month Free Trial</button>
+    <button class="btn btn-ghost" onclick="document.getElementById('signInModal').classList.add('open')">Sign In</button>
+  </div>
+</header>
+
+<div class="banner" id="banner"></div>
+
+<div class="trial-overlay" id="trialOverlay">
+  <div class="trial-card">
+    <div style="font-size:3rem">🎉</div>
+    <h2>Paid Plan Activated!</h2>
+    <p>Your 1-month free trial is live. All premium companions unlocked.</p>
+    <ul>
+      <li>🌐 Webo – Website Builder</li>
+      <li>🤖 Broid – AI Builder</li>
+      <li>🎮 Gama – Game Builder</li>
+      <li>🧮 Abakon – Abacus Teacher</li>
+      <li>💰 Jorge – Finance Adviser</li>
+    </ul>
+    <button class="btn btn-primary" onclick="document.getElementById('trialOverlay').classList.remove('show')">Start Exploring →</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <button class="nav-btn" onclick="newChat()">＋ <span class="label">New Chat</span></button>
+      <button class="nav-btn" id="btnLibrary" onclick="toggleSection('library')">📚 <span class="label">Library</span><span class="arrow">▶</span></button>
+      <div class="collapse-box" id="libraryBox"></div>
+
+      <button class="nav-btn" id="btnProjects" onclick="toggleSection('projects')">📁 <span class="label">Projects</span><span class="arrow">▶</span></button>
+      <div class="collapse-box" id="projectsBox"></div>
+
+      <button class="nav-btn" id="btnFree" onclick="toggleSection('free')">✨ <span class="label">Free Mods</span><span class="arrow">▶</span></button>
+      <div class="collapse-box" id="freeBox"></div>
+
+      <button class="nav-btn" id="btnPaid" onclick="toggleSection('paid')">💎 <span class="label">Paid Mods</span><span class="arrow">▶</span></button>
+      <div class="collapse-box" id="paidBox"></div>
+    </div>
+    <div class="sidebar-scroll">
+      <div style="font-size:0.72rem;color:var(--muted);padding:6px 4px;">Select a companion to chat</div>
+      <div id="activeModeList"></div>
+    </div>
+  </aside>
+
+  <!-- CHAT AREA -->
+  <div class="chat-area">
+    <div class="face-box">
+      <div class="face" id="aiFace"><span class="hat">🎩</span><span id="faceEmoji">😊</span></div>
+      <div class="face-label" id="faceLabel">Happy</div>
+      <div class="face-ai" id="faceAiName">Arthur</div>
+    </div>
+
+    <div class="messages" id="messages"></div>
+
+    <!-- Library full view -->
+    <div class="view-panel" id="libraryView">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><h2>📚 Library</h2><div class="sub">Your previous chats</div></div>
+        <button class="btn btn-ghost" onclick="closeViews()">✕ Close</button>
+      </div>
+      <div class="card-grid" id="libraryGrid"></div>
+    </div>
+
+    <!-- Projects full view -->
+    <div class="view-panel" id="projectsView">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div><h2>📁 Projects</h2><div class="sub">Saved projects from builders & painting</div></div>
+        <button class="btn btn-ghost" onclick="closeViews()">✕ Close</button>
+      </div>
+      <div class="card-grid" id="projectsGrid"></div>
+    </div>
+
+    <!-- Lucy paint -->
+    <div class="special-panel" id="paintPanel">
+      <div class="panel-header"><h2>🎨 Lucy's Studio</h2><button class="btn btn-ghost" onclick="closeSpecial()">✕</button></div>
+      <div class="paint-tools">
+        <button class="tool-btn active" data-tool="draw" onclick="setTool('draw')">✏️ Draw</button>
+        <button class="tool-btn" data-tool="erase" onclick="setTool('erase')">🧹 Erase</button>
+        <button class="tool-btn" onclick="clearCanvas()">🗑️ Clear</button>
+        <input type="color" id="brushColor" value="#a78bfa" style="width:32px;height:32px;border:none;border-radius:8px;" />
+        <input type="range" id="brushSize" min="2" max="40" value="8" style="width:90px" />
+        <button class="tool-btn" onclick="downloadCanvas()">💾 Save</button>
+        <button class="tool-btn" onclick="saveProject('painting')">📌 Save to Projects</button>
+      </div>
+      <canvas id="paintCanvas"></canvas>
+    </div>
+
+    <!-- Abakon -->
+    <div class="special-panel" id="abacusPanel">
+      <div class="panel-header"><h2>🧮 Abakon</h2><button class="btn btn-ghost" onclick="closeSpecial()">✕</button></div>
+      <div class="abacus-frame">
+        <div id="abacusLesson">Make the number <strong>7</strong></div>
+        <div class="abacus-rod" id="abacusRod"></div>
+        <div class="abacus-value">Value: <span id="abacusVal">0</span></div>
+        <div>
+          <button class="tool-btn" onclick="abacusReset()">Reset</button>
+          <button class="tool-btn" onclick="abacusNext()">Next Lesson</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Builders -->
+    <div class="special-panel" id="builderPanel">
+      <div class="panel-header"><h2 id="builderTitle">Builder</h2><button class="btn btn-ghost" onclick="closeSpecial()">✕</button></div>
+      <div class="builder-canvas" id="builderContent"></div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <textarea id="userInput" rows="1" placeholder="Message Arthur..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+        <button class="send-btn" onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <div>Soul: <span id="statusMode">Arthur</span> · Plan: <span id="statusPlan">Free</span> · Strikes: <span id="statusStrikes">0 / 50</span></div>
+  <div>Living Souls</div>
+</div>
+
+<div class="modal-overlay" id="signInModal">
+  <div class="modal">
+    <h2>Sign In</h2>
+    <p>Demo sign-in (no real auth yet).</p>
+    <div class="form-group"><label>Email</label><input id="emailInput" placeholder="you@example.com" /></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="document.getElementById('signInModal').classList.remove('open')">Cancel</button>
+      <button class="btn btn-primary" onclick="document.getElementById('signInModal').classList.remove('open');showBanner('Signed in (demo)','success')">Sign In</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ========== SOULS ========== */
+const SOULS = {
+  arthur:     { name:'Arthur', emoji:'🧑‍💼', free:true,  role:'Normal • Everyday chat', face:'happy',  greet:"Hello! I'm Arthur. How can I help?" },
+  rex:        { name:'Rex', emoji:'🔥', free:true,  role:'Roast • Battle mode', face:'roast',  greet:"Oh you want smoke? Let's go." },
+  lucy:       { name:'Lucy', emoji:'🎨', free:true,  role:'Painting • Create art', face:'paint',  greet:"Let's make something beautiful!" },
+  mike:       { name:'Mike', emoji:'💼', free:true,  role:'Career • Advice', face:'cool',   greet:"Career mode on. Goals or interview prep?" },
+  kuchupuchu: { name:'Kuchu Puchu', emoji:'🎉', free:true, role:'Fun • Jokes', face:'party', greet:"Yayyy! Let's be silly 🥳" },
+  webo:       { name:'Webo', emoji:'🌐', free:false, role:'Website Builder', face:'cool',    greet:"Describe the website you want." },
+  broid:      { name:'Broid', emoji:'🤖', free:false, role:'AI Builder', face:'thinking', greet:"What AI agent should we design?" },
+  gama:       { name:'Gama', emoji:'🎮', free:false, role:'Game Builder', face:'cool',    greet:"Tell me the game idea!" },
+  abakon:     { name:'Abakon', emoji:'🧮', free:false, role:'Abacus Teacher', face:'happy',  greet:"Let's train with the abacus." },
+  jorge:      { name:'Jorge', emoji:'💰', free:false, role:'Finance Adviser', face:'cool',   greet:"Jorge here. Budget, investing, debt, savings — what do you need?" }
+};
+
+const FACES = {
+  happy:{e:'😊',l:'Happy'}, love:{e:'🥰',l:'In Love'}, heart:{e:'😍',l:'Heart'},
+  roast:{e:'🔥',l:'Burning!'}, angry:{e:'😡',l:'Angry'}, sad:{e:'😢',l:'Sad'},
+  cool:{e:'😎',l:'Cool'}, paint:{e:'🎨',l:'Artist'}, thinking:{e:'🤔',l:'Thinking'},
+  wink:{e:'😉',l:'Wink'}, laugh:{e:'😂',l:'Laughing'}, ban:{e:'🚫',l:'Banned'}, party:{e:'🥳',l:'Party'}
+};
+
+let currentMode = 'arthur';
+let paidUnlocked = localStorage.getItem('ls_trial') === '1';
+let strikes = 0;
+let bannedUntil = null;
+let faceTimer = null;
+let isDrawing = false;
+let tool = 'draw';
+let abacusTarget = 7;
+let openSection = null;
+
+/* chats & projects stored in localStorage */
+function loadChats() { return JSON.parse(localStorage.getItem('ls_chats') || '[]'); }
+function saveChats(list) { localStorage.setItem('ls_chats', JSON.stringify(list)); }
+function loadProjects() { return JSON.parse(localStorage.getItem('ls_projects') || '[]'); }
+function saveProjects(list) { localStorage.setItem('ls_projects', JSON.stringify(list)); }
+
+let chats = loadChats();
+let currentChatId = null;
+let currentMessages = [];
+
+const mild = ['stupid','bad','mental','mad','dumb','idiot','fool','loser','ugly','animal','dog','pig'];
+const severe = ['bullshit','bitch','shit','fuck','asshole','crap','damn','bastard'];
+const banW = ['motherfucker','mother fucker','mofo','your mom','your mother','your dad','yo mama'];
+
+/* ========== NOTIFY OWNER ========== */
+async function notifyOwner(eventType, extra = {}) {
+  const payload = { event: eventType, time: new Date().toISOString(), localTime: new Date().toLocaleString(), ...extra };
+  const log = JSON.parse(localStorage.getItem('ls_owner_log') || '[]');
+  log.unshift(payload);
+  localStorage.setItem('ls_owner_log', JSON.stringify(log.slice(0, 100)));
+  if (OWNER_CONFIG.formspreeUrl) {
+    try {
+      await fetch(OWNER_CONFIG.formspreeUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ _subject: 'Living Souls – New ' + eventType, message: 'New ' + eventType + ' at ' + payload.localTime, ...payload })
+      });
+    } catch (e) {}
+  }
+  if (OWNER_CONFIG.discordWebhook && !OWNER_CONFIG.discordWebhook.includes('PASTE_')) {
+    try {
+      await fetch(OWNER_CONFIG.discordWebhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: '🔔 Living Souls — New **' + eventType + '**\n⏰ ' + payload.localTime })
+      });
+    } catch (e) {}
+  }
+}
+
+/* ========== SOUND ========== */
+function playSuccessSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = f; o.type = 'sine';
+      g.gain.setValueAtTime(0.001, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.15, ctx.currentTime + 0.02 + i * 0.1);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3 + i * 0.1);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(ctx.currentTime + i * 0.1); o.stop(ctx.currentTime + 0.35 + i * 0.1);
+    });
+  } catch (_) {}
+}
+
+/* ========== FACE ========== */
+function setFace(key, ms = 0) {
+  if (faceTimer) clearTimeout(faceTimer);
+  const f = FACES[key] || FACES.happy;
+  const el = document.getElementById('aiFace');
+  el.className = 'face';
+  if (key === 'roast' || key === 'angry') el.classList.add('burning');
+  if (key === 'paint' || currentMode === 'lucy') el.classList.add('painter');
+  if (key === 'love' || key === 'heart') el.classList.add('love');
+  if (currentMode === 'jorge') el.classList.add('finance');
+  document.getElementById('faceEmoji').textContent = f.e;
+  document.getElementById('faceLabel').textContent = f.l;
+  document.getElementById('faceAiName').textContent = SOULS[currentMode].name;
+  if (ms) faceTimer = setTimeout(() => setFace(SOULS[currentMode].face), ms);
+}
+
+function react(text) {
+  const t = text.toLowerCase();
+  if (/i love you|love you/.test(t)) return setFace('heart', 4000);
+  if (/thank|awesome|great|cool/.test(t)) return setFace('happy', 2800);
+  if (/haha|lol|funny/.test(t)) return setFace('laugh', 2800);
+  if (/sad|cry/.test(t)) return setFace('sad', 3000);
+  if (/hello|hi |hey /.test(t)) return setFace('wink', 2500);
+  setFace('thinking');
+}
+
+/* ========== SIDEBAR SECTIONS ========== */
+function toggleSection(name) {
+  const map = { library: 'libraryBox', projects: 'projectsBox', free: 'freeBox', paid: 'paidBox' };
+  const btnMap = { library: 'btnLibrary', projects: 'btnProjects', free: 'btnFree', paid: 'btnPaid' };
+  const box = document.getElementById(map[name]);
+  const btn = document.getElementById(btnMap[name]);
+  const isOpen = box.classList.contains('show');
+
+  // close all
+  Object.values(map).forEach(id => document.getElementById(id).classList.remove('show'));
+  Object.values(btnMap).forEach(id => document.getElementById(id).classList.remove('open'));
+
+  if (!isOpen) {
+    box.classList.add('show');
+    btn.classList.add('open');
+    openSection = name;
+    if (name === 'library') renderLibrarySidebar();
+    if (name === 'projects') renderProjectsSidebar();
+    if (name === 'free') renderFreeMods();
+    if (name === 'paid') renderPaidMods();
+  } else {
+    openSection = null;
+  }
+}
+
+function renderFreeMods() {
+  const box = document.getElementById('freeBox');
+  box.innerHTML = '';
+  Object.entries(SOULS).filter(([,s]) => s.free).forEach(([id, s]) => {
+    box.appendChild(makeModeItem(id, s));
+  });
+}
+
+function renderPaidMods() {
+  const box = document.getElementById('paidBox');
+  box.innerHTML = '';
+  Object.entries(SOULS).filter(([,s]) => !s.free).forEach(([id, s]) => {
+    box.appendChild(makeModeItem(id, s));
+  });
+}
+
+function makeModeItem(id, s) {
+  const div = document.createElement('div');
+  div.className = 'mode-item' + (id === currentMode ? ' active' : '') + (!s.free && !paidUnlocked ? ' locked' : '');
+  div.innerHTML = `
+    <div class="mode-avatar">${s.emoji}</div>
+    <div style="flex:1;min-width:0">
+      <div class="mode-name">${s.name}</div>
+      <div class="mode-role">${s.role}</div>
+    </div>
+    ${s.free ? '<span class="plan-badge badge-free">FREE</span>' : `<span class="lock-icon">${paidUnlocked ? '✨' : '🔒'}</span>`}
+  `;
+  div.onclick = () => selectMode(id);
+  return div;
+}
+
+function renderActiveList() {
+  const box = document.getElementById('activeModeList');
+  box.innerHTML = '';
+  box.appendChild(makeModeItem(currentMode, SOULS[currentMode]));
+}
+
+function renderLibrarySidebar() {
+  const box = document.getElementById('libraryBox');
+  box.innerHTML = '';
+  if (!chats.length) {
+    box.innerHTML = '<div class="empty-hint">No saved chats yet.<br>Start chatting, then they appear here.</div>';
+    return;
+  }
+  chats.slice(0, 12).forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'history-item' + (c.id === currentChatId ? ' active' : '');
+    div.innerHTML = `<span>${SOULS[c.mode]?.emoji || '💬'}</span> <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.title}</span>`;
+    div.onclick = () => openChat(c.id);
+    box.appendChild(div);
+  });
+  const more = document.createElement('div');
+  more.className = 'history-item';
+  more.style.color = 'var(--accent)';
+  more.textContent = 'View all →';
+  more.onclick = () => openLibraryView();
+  box.appendChild(more);
+}
+
+function renderProjectsSidebar() {
+  const box = document.getElementById('projectsBox');
+  const projects = loadProjects();
+  box.innerHTML = '';
+  if (!projects.length) {
+    box.innerHTML = '<div class="empty-hint">No projects yet.<br>Save from Lucy or builders.</div>';
+    return;
+  }
+  projects.slice(0, 8).forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'project-item';
+    div.innerHTML = `<span>📌</span> <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.title}</span>`;
+    div.onclick = () => openProjectsView();
+    box.appendChild(div);
+  });
+}
+
+/* ========== LIBRARY / PROJECTS VIEWS ========== */
+function openLibraryView() {
+  closeViews();
+  document.getElementById('libraryView').classList.add('open');
+  const grid = document.getElementById('libraryGrid');
+  grid.innerHTML = '';
+  if (!chats.length) {
+    grid.innerHTML = '<div class="empty-hint">No chats saved yet.</div>';
+    return;
+  }
+  chats.forEach(c => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<h3>${SOULS[c.mode]?.emoji || '💬'} ${c.title}</h3>
+      <p>With ${SOULS[c.mode]?.name || 'Unknown'} · ${c.messages.length} messages</p>
+      <div class="meta">${new Date(c.updated).toLocaleString()}</div>`;
+    card.onclick = () => { closeViews(); openChat(c.id); };
+    grid.appendChild(card);
+  });
+}
+
+function openProjectsView() {
+  closeViews();
+  document.getElementById('projectsView').classList.add('open');
+  const grid = document.getElementById('projectsGrid');
+  const projects = loadProjects();
+  grid.innerHTML = '';
+  if (!projects.length) {
+    grid.innerHTML = '<div class="empty-hint">No projects yet.</div>';
+    return;
+  }
+  projects.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<h3>📌 ${p.title}</h3><p>${p.type}</p><div class="meta">${new Date(p.created).toLocaleString()}</div>`;
+    grid.appendChild(card);
+  });
+}
+
+function closeViews() {
+  document.getElementById('libraryView').classList.remove('open');
+  document.getElementById('projectsView').classList.remove('open');
+}
+
+function saveProject(type) {
+  const projects = loadProjects();
+  projects.unshift({
+    id: Date.now(),
+    title: type + ' ' + new Date().toLocaleDateString(),
+    type: type,
+    created: Date.now()
+  });
+  saveProjects(projects);
+  showBanner('Saved to Projects', 'success');
+}
+
+/* ========== MODE SELECT ========== */
+function selectMode(id) {
+  const s = SOULS[id];
+  if (!s.free && !paidUnlocked) {
+    showBanner('🔒 Paid mod — activate Free Trial to unlock', 'warn');
+    return;
+  }
+  if (id === 'rex' && bannedUntil && new Date() < bannedUntil) {
+    showBanner('Banned from Rex until ' + bannedUntil.toLocaleString(), 'danger');
+    return;
+  }
+  // save current chat before switch
+  persistCurrentChat();
+  currentMode = id;
+  renderActiveList();
+  if (openSection === 'free') renderFreeMods();
+  if (openSection === 'paid') renderPaidMods();
+  closeSpecial();
+  closeViews();
+  document.getElementById('statusMode').textContent = s.name;
+  document.getElementById('userInput').placeholder = 'Message ' + s.name + '...';
+  setFace(s.face);
+  addSys('Switched to <strong>' + s.name + '</strong> — ' + s.role);
+  addAi(s.greet);
+  if (id === 'lucy') openPaint();
+  if (id === 'abakon') openAbacus();
+  if (['webo','broid','gama'].includes(id)) openBuilder(id);
+}
+
+/* ========== CHAT ========== */
+function addMsg(html, cls) {
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.innerHTML = html;
+  const box = document.getElementById('messages');
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  currentMessages.push({ html, cls, t: Date.now() });
+}
+
+function addAi(t, roast) {
+  addMsg('<span class="tag">' + SOULS[currentMode].name + '</span>' + t, 'ai' + (roast ? ' roast' : ''));
+}
+function addUser(t) { addMsg(t, 'user'); }
+function addSys(t) { addMsg(t, 'system'); }
+
+function persistCurrentChat() {
+  if (!currentMessages.length) return;
+  const titleMsg = currentMessages.find(m => m.cls === 'user');
+  const title = titleMsg ? titleMsg.html.replace(/<[^>]+>/g,'').slice(0, 40) : ('Chat with ' + SOULS[currentMode].name);
+  if (currentChatId) {
+    const idx = chats.findIndex(c => c.id === currentChatId);
+    if (idx >= 0) {
+      chats[idx].messages = currentMessages.slice();
+      chats[idx].updated = Date.now();
+      chats[idx].title = title;
+      chats[idx].mode = currentMode;
+    }
+  } else {
+    currentChatId = Date.now();
+    chats.unshift({
+      id: currentChatId,
+      title,
+      mode: currentMode,
+      messages: currentMessages.slice(),
+      updated: Date.now()
+    });
+  }
+  saveChats(chats);
+}
+
+function openChat(id) {
+  persistCurrentChat();
+  const c = chats.find(x => x.id === id);
+  if (!c) return;
+  currentChatId = c.id;
+  currentMode = c.mode;
+  currentMessages = [];
+  document.getElementById('messages').innerHTML = '';
+  c.messages.forEach(m => {
+    const d = document.createElement('div');
+    d.className = 'msg ' + m.cls;
+    d.innerHTML = m.html;
+    document.getElementById('messages').appendChild(d);
+    currentMessages.push(m);
+  });
+  document.getElementById('statusMode').textContent = SOULS[currentMode].name;
+  document.getElementById('userInput').placeholder = 'Message ' + SOULS[currentMode].name + '...';
+  setFace(SOULS[currentMode].face);
+  renderActiveList();
+  closeViews();
+  showBanner('Loaded chat: ' + c.title, 'success');
+}
+
+function newChat() {
+  persistCurrentChat();
+  currentChatId = null;
+  currentMessages = [];
+  document.getElementById('messages').innerHTML = '';
+  addSys('New chat started with <strong>' + SOULS[currentMode].name + '</strong>.');
+  addAi(SOULS[currentMode].greet);
+  setFace(SOULS[currentMode].face);
+  closeViews();
+  closeSpecial();
+  showBanner('New chat', 'success');
+}
+
+function sendMessage() {
+  if (currentMode === 'rex' && bannedUntil && new Date() < bannedUntil) {
+    showBanner('Banned from Rex', 'danger'); setFace('ban'); return;
+  }
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+  addUser(text);
+  input.value = '';
+  react(text);
+
+  if (currentMode === 'rex') {
+    const r = moderate(text);
+    if (r.banned) {
+      bannedUntil = new Date(Date.now() + 30*24*60*60*1000);
+      localStorage.setItem('ls_ban', bannedUntil.toISOString());
+      setFace('ban');
+      addSys('🚫 <strong>BANNED 1 MONTH</strong> from Rex');
+      showBanner('Banned for 1 month', 'danger');
+      return;
+    }
+    if (r.pts) {
+      strikes += r.pts;
+      document.getElementById('statusStrikes').textContent = strikes + ' / 50';
+      if (strikes >= 50) {
+        bannedUntil = new Date(Date.now() + 7*24*60*60*1000);
+        showBanner('50 strikes — restricted', 'danger');
+        return;
+      }
+      if (r.pts >= 5) showBanner('Severe language +' + r.pts, 'warn');
+    }
+  }
+
+  setTimeout(() => {
+    addAi(reply(text), currentMode === 'rex');
+    setFace(SOULS[currentMode].face);
+    persistCurrentChat();
+  }, 600 + Math.random() * 500);
+}
+
+function moderate(text) {
+  const t = text.toLowerCase().replace(/[^a-z\s]/g, ' ');
+  if (banW.some(w => t.includes(w))) return { banned: true, pts: 999 };
+  let pts = 0;
+  severe.forEach(w => { if (t.includes(w)) pts += 5; });
+  mild.forEach(w => { if (t.includes(w)) pts += 1; });
+  return { banned: false, pts };
+}
+
+function reply(text) {
+  const t = text.toLowerCase(), m = currentMode;
+  if (m === 'rex') {
+    const a = ["That was weaker than your WiFi.","Wet socks have more personality.","Is that your final form? Underwhelming.","My circuits cringed.","Come back with a sharper tongue."];
+    return a[Math.floor(Math.random()*a.length)];
+  }
+  if (m === 'mike') {
+    if (/resume|cv/.test(t)) return "Quantify impact (e.g. +23% sales). Keep early-career resumes to 1 page.";
+    if (/interview/.test(t)) return "Use STAR: Situation, Task, Action, Result. Practice out loud.";
+    return "Tell me your goal or the role you're targeting — we'll build a plan.";
+  }
+  if (m === 'kuchupuchu') {
+    const a = ["Hehe kuchu puchu! 🤪 Why did the scarecrow win an award? He was outstanding in his field!","Yaaay! Let's invent a silly dance 💃","Puchu! If you were a fruit you'd be a fine-apple 🍍"];
+    return a[Math.floor(Math.random()*a.length)];
+  }
+  if (m === 'lucy') return "Describe the scene or open the studio and paint freely!";
+  if (m === 'webo') return "Portfolio, landing page, or shop? I'll outline sections and structure.";
+  if (m === 'broid') return "Chatbot, agent, or classifier? Tell me the goal and constraints.";
+  if (m === 'gama') return "Genre + core loop? Drop the idea and we'll shape mechanics.";
+  if (m === 'abakon') return "Keep practicing on the board. Next we'll do two-digit addition.";
+  if (m === 'jorge') {
+    if (/budget|spend/.test(t)) return "List income, fixed costs, then wants. Aim to save at least 20% if possible. Want a simple monthly template?";
+    if (/invest|stock|crypto/.test(t)) return "Only invest money you won't need soon. Diversify. Avoid FOMO. What's your timeline and risk comfort?";
+    if (/debt|loan|credit/.test(t)) return "List debts by interest rate. Pay minimums on all, then attack the highest rate first (avalanche method).";
+    if (/save|saving/.test(t)) return "Automate savings the day you get paid. Start small if needed — consistency beats size.";
+    return "I can help with budgeting, saving, debt payoff, or basic investing. What is your main money goal right now?";
+  }
+  if (/i love you|love you/.test(t)) return "That's kind — glad to be here with you.";
+  if (/hello|hi |hey /.test(t)) return "Hey! What's on your mind?";
+  const d = ["Interesting — tell me more.","I'm listening.","Got it. How can I help with that?"];
+  return d[Math.floor(Math.random()*d.length)];
+}
+
+/* ========== TRIAL ========== */
+function activateTrial() {
+  if (paidUnlocked) return;
+  playSuccessSound();
+  paidUnlocked = true;
+  localStorage.setItem('ls_trial', '1');
+  document.getElementById('trialBtn').textContent = '✓ Trial Active';
+  document.getElementById('trialBtn').classList.add('activated');
+  document.getElementById('statusPlan').textContent = 'Paid (Trial)';
+  if (openSection === 'paid') renderPaidMods();
+  document.getElementById('trialOverlay').classList.add('show');
+  notifyOwner('trial', { plan: '1 Month Free Trial', source: 'Living Souls web app' });
+}
+
+/* ========== SPECIAL PANELS ========== */
+function closeSpecial() {
+  ['paintPanel','abacusPanel','builderPanel'].forEach(id => document.getElementById(id).classList.remove('open'));
+}
+function openPaint() {
+  closeSpecial();
+  document.getElementById('paintPanel').classList.add('open');
+  const c = document.getElementById('paintCanvas'), ctx = c.getContext('2d');
+  const p = document.getElementById('paintPanel');
+  c.width = p.clientWidth - 32; c.height = p.clientHeight - 100;
+  ctx.fillStyle = '#fff'; ctx.fillRect(0,0,c.width,c.height);
+  window._ctx = ctx; window._c = c;
+  setFace('paint');
+}
+function openAbacus() {
+  closeSpecial();
+  document.getElementById('abacusPanel').classList.add('open');
+  const rod = document.getElementById('abacusRod');
+  rod.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const b = document.createElement('div');
+    b.className = 'bead off';
+    b.onclick = () => { b.classList.toggle('off'); updateAbacus(); };
+    rod.appendChild(b);
+  }
+  updateAbacus();
+  setFace('happy');
+}
+function updateAbacus() {
+  const n = document.querySelectorAll('#abacusRod .bead:not(.off)').length;
+  document.getElementById('abacusVal').textContent = n;
+  if (n === abacusTarget) document.getElementById('abacusLesson').innerHTML = '🎉 Perfect! You made <strong>' + abacusTarget + '</strong>';
+}
+function abacusReset() {
+  document.querySelectorAll('#abacusRod .bead').forEach(b => b.classList.add('off'));
+  updateAbacus();
+  document.getElementById('abacusLesson').innerHTML = 'Make the number <strong>' + abacusTarget + '</strong>';
+}
+function abacusNext() {
+  const targets = [3,5,7,8,10,4,6,9,2];
+  abacusTarget = targets[Math.floor(Math.random()*targets.length)];
+  abacusReset();
+  addAi('New challenge: make ' + abacusTarget);
+}
+function openBuilder(id) {
+  closeSpecial();
+  document.getElementById('builderPanel').classList.add('open');
+  const titles = { webo:'🌐 Webo – Website Builder', broid:'🤖 Broid – AI Builder', gama:'🎮 Gama – Game Builder' };
+  document.getElementById('builderTitle').textContent = titles[id] || 'Builder';
+  document.getElementById('builderContent').innerHTML = `
+    <h3>${SOULS[id].name}</h3>
+    <p>Describe what you want in chat. This panel is the workspace preview.</p>
+    <div class="builder-preview">Preview area (prototype)</div>
+    <button class="tool-btn" onclick="saveProject('${id}')">📌 Save to Projects</button>`;
+  setFace('cool');
+}
+
+function setTool(t) {
+  tool = t;
+  document.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
+}
+function clearCanvas() { if (window._ctx) { window._ctx.fillStyle='#fff'; window._ctx.fillRect(0,0,window._c.width,window._c.height); } }
+function downloadCanvas() {
+  if (!window._c) return;
+  const a = document.createElement('a'); a.download = 'lucy-art.png'; a.href = window._c.toDataURL(); a.click();
+}
+function pos(e) {
+  const r = window._c.getBoundingClientRect();
+  return { x:(e.clientX-r.left)*(window._c.width/r.width), y:(e.clientY-r.top)*(window._c.height/r.height) };
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const c = document.getElementById('paintCanvas');
+  c.addEventListener('mousedown', e => { isDrawing=true; const p=pos(e); window._ctx.beginPath(); window._ctx.moveTo(p.x,p.y); });
+  c.addEventListener('mousemove', e => {
+    if (!isDrawing||!window._ctx) return;
+    const p = pos(e);
+    window._ctx.lineWidth = document.getElementById('brushSize').value;
+    window._ctx.lineCap = 'round';
+    window._ctx.strokeStyle = tool==='erase' ? '#fff' : document.getElementById('brushColor').value;
+    window._ctx.lineTo(p.x,p.y); window._ctx.stroke();
+  });
+  c.addEventListener('mouseup', () => isDrawing=false);
+  c.addEventListener('mouseout', () => isDrawing=false);
+});
+
+function showBanner(text, type) {
+  const b = document.getElementById('banner');
+  b.textContent = text; b.className = 'banner show ' + type;
+  setTimeout(() => b.className = 'banner', 3500);
+}
+
+/* INIT */
+if (paidUnlocked) {
+  document.getElementById('trialBtn').textContent = '✓ Trial Active';
+  document.getElementById('trialBtn').classList.add('activated');
+  document.getElementById('statusPlan').textContent = 'Paid (Trial)';
+}
+const ban = localStorage.getItem('ls_ban');
+if (ban) { bannedUntil = new Date(ban); if (new Date() >= bannedUntil) localStorage.removeItem('ls_ban'); }
+
+renderActiveList();
+addSys('Welcome to <strong>Living Souls</strong> — half dead, half alive.<br>Use <b>Free Mods</b> / <b>Paid Mods</b> in the sidebar. <b>Library</b> keeps your chats. <b>Projects</b> stores builds & art.');
+addAi(SOULS.arthur.greet);
+setFace('happy');
+</script>
+</body>
+</html>
